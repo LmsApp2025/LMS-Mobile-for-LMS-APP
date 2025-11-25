@@ -23,6 +23,7 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+// Request Interceptor
 axiosInstance.interceptors.request.use(
   async (config) => {
     const accessToken = await AsyncStorage.getItem('access_token');
@@ -35,6 +36,7 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Response Interceptor
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -50,8 +52,6 @@ axiosInstance.interceptors.response.use(
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
         }).then(token => {
-          // Fix: Ensure headers exist before assigning
-          if(!originalRequest.headers) originalRequest.headers = {};
           originalRequest.headers['access-token'] = token;
           return axiosInstance(originalRequest);
         }).catch(err => {
@@ -95,8 +95,10 @@ axiosInstance.interceptors.response.use(
         // Fix for Axios Header handling:
         // Ensure we set the header on the original request object correctly
         // We explicitly overwrite the header property
-        if(!originalRequest.headers) originalRequest.headers = {};
-        originalRequest.headers['access-token'] = newAccessToken;
+        originalRequest.headers = {
+            ...originalRequest.headers,
+            'access-token': newAccessToken
+        };
         
         processQueue(null, newAccessToken);
         
@@ -104,10 +106,12 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
 
       } catch (refreshError: any) {
-        console.log("Session refresh failed:", refreshError.response?.data || refreshError.message);
-
+        //console.log("Session refresh failed:", refreshError.response?.data || refreshError.message);
         processQueue(refreshError, null);
         
+        // Only logout on definitive auth failures (400/401/403)
+        // This prevents logout on network errors (500/Timeout)
+        const status = refreshError.response?.status;
         if (refreshError.response?.status === 400 || refreshError.response?.status === 401) {
             await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
             router.replace("/(routes)/login"); 
