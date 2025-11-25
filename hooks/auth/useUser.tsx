@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import axiosInstance from '@/utils/axios.instance';
-import AsyncStorage from "@react-native-async-storage/async-storage";
+//import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function useUser() {
   const [loading, setLoading] = useState(true); // Start with loading = true
@@ -24,7 +24,7 @@ export default function useUser() {
       // If fetching fails for any reason (401, network error, etc.), clear the user.
       setUser(undefined); 
       // It's also a good idea to clear out potentially invalid tokens from storage
-      await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
+      //await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
     } finally {
       // CRITICAL FIX: Only set loading to false AFTER the entire process (success or fail) is complete.
       setLoading(false);

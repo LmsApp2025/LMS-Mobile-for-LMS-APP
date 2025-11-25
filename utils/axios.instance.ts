@@ -76,7 +76,7 @@ axiosInstance.interceptors.response.use(
         const refreshResponse = await axios.get(`${SERVER_URI}/refresh`, {
           headers: { 
             'refresh-token': refreshToken,
-            //'Content-Type': 'application/json' 
+            'Content-Type': 'application/json' 
           },
         });
 
