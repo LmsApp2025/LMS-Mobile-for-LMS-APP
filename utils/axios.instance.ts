@@ -52,7 +52,9 @@ axiosInstance.interceptors.response.use(
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
         }).then(token => {
-          originalRequest.headers['access-token'] = token;
+          if (originalRequest.headers) {
+             originalRequest.headers['access-token'] = token;
+          }
           return axiosInstance(originalRequest);
         }).catch(err => {
           return Promise.reject(err);
@@ -80,7 +82,7 @@ axiosInstance.interceptors.response.use(
 
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshResponse.data;
 
-        if (!newAccessToken || !newRefreshToken) {
+        if (!newAccessToken) {
             throw new Error("Server did not return new tokens");
         }
 
@@ -91,14 +93,17 @@ axiosInstance.interceptors.response.use(
         // Set the new token on the original request's header
         axiosInstance.defaults.headers.common['access-token'] = newAccessToken;
         
-        //originalRequest.headers['access-token'] = newAccessToken;
-        // Fix for Axios Header handling:
-        // Ensure we set the header on the original request object correctly
-        // We explicitly overwrite the header property
-        originalRequest.headers = {
-            ...originalRequest.headers,
-            'access-token': newAccessToken
-        };
+        // Robustly attach header to the original request for retry
+        if (!originalRequest.headers) {
+            originalRequest.headers = {};
+        }
+
+        // Handle Axios v1.x+ AxiosHeaders object vs older plain objects
+        if (originalRequest.headers.set && typeof originalRequest.headers.set === 'function') {
+            originalRequest.headers.set('access-token', newAccessToken);
+        } else {
+            originalRequest.headers['access-token'] = newAccessToken;
+        }
         
         processQueue(null, newAccessToken);
         
@@ -112,7 +117,7 @@ axiosInstance.interceptors.response.use(
         // Only logout on definitive auth failures (400/401/403)
         // This prevents logout on network errors (500/Timeout)
         const status = refreshError.response?.status;
-        if (refreshError.response?.status === 400 || refreshError.response?.status === 401) {
+        if (status === 400 || status === 401 || status === 403) {
             await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
             router.replace("/(routes)/login"); 
         }
