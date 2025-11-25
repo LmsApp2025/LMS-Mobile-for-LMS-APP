@@ -39,13 +39,23 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    if (originalRequest.url?.includes('/refresh')) {
+        return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
+
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
         }).then(token => {
+          // Fix: Ensure headers exist before assigning
+          if(!originalRequest.headers) originalRequest.headers = {};
           originalRequest.headers['access-token'] = token;
           return axiosInstance(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
         });
       }
 
@@ -64,11 +74,15 @@ axiosInstance.interceptors.response.use(
         const refreshResponse = await axios.get(`${SERVER_URI}/refresh`, {
           headers: { 
             'refresh-token': refreshToken,
-            'Content-Type': 'application/json' 
+            //'Content-Type': 'application/json' 
           },
         });
 
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshResponse.data;
+
+        if (!newAccessToken || !newRefreshToken) {
+            throw new Error("Server did not return new tokens");
+        }
 
         // Securely store the new tokens
         await AsyncStorage.setItem('access_token', newAccessToken);
@@ -80,11 +94,9 @@ axiosInstance.interceptors.response.use(
         //originalRequest.headers['access-token'] = newAccessToken;
         // Fix for Axios Header handling:
         // Ensure we set the header on the original request object correctly
-        if (originalRequest.headers) {
-            originalRequest.headers['access-token'] = newAccessToken;
-        } else {
-            originalRequest.headers = { 'access-token': newAccessToken };
-        }
+        // We explicitly overwrite the header property
+        if(!originalRequest.headers) originalRequest.headers = {};
+        originalRequest.headers['access-token'] = newAccessToken;
         
         processQueue(null, newAccessToken);
         
@@ -92,14 +104,14 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
 
       } catch (refreshError: any) {
-        //console.log("Session refresh failed. Logging out.");
+        console.log("Session refresh failed:", refreshError.response?.data || refreshError.message);
+
         processQueue(refreshError, null);
         
-        // Clear out invalid tokens
-        await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
-        
-        // Redirect to the start of the app flow
-        router.replace("/(routes)/onboarding"); 
+        if (refreshError.response?.status === 400 || refreshError.response?.status === 401) {
+            await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
+            router.replace("/(routes)/login"); 
+        }
         
         return Promise.reject(refreshError);
       } finally {
