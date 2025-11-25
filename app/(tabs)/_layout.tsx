@@ -1,0 +1,54 @@
+import useUser from "@/hooks/auth/useUser";
+import { Tabs, useFocusEffect } from "expo-router"; // <-- Import useFocusEffect
+import { Image } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { useCallback } from "react"; // <-- Import useCallback
+
+export default function TabsLayout() {
+  // Get the refetch function from our hook
+  const { refetch } = useUser();
+
+  // This effect will run every time the user navigates to any screen within the tabs.
+  useFocusEffect(
+    useCallback(() => {
+      console.log("Tab screen focused, refetching user data.");
+      refetch();
+    }, [refetch])
+  );
+
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1 }}>
+        <Tabs
+          screenOptions={({ route }) => ({
+            tabBarIcon: ({ color }) => {
+              let iconName;
+              if (route.name === "index") {
+                iconName = require("@/assets/icons/HouseSimple.png");
+              } else if (route.name === "search/index") {
+                iconName = require("@/assets/icons/search.png");
+              } else if (route.name === "courses/index") {
+                iconName = require("@/assets/icons/BookBookmark.png");
+              } else if (route.name === "profile/index") {
+                iconName = require("@/assets/icons/User.png");
+              }
+              return (
+                <Image
+                  style={{ width: 25, height: 25, tintColor: color }}
+                  source={iconName}
+                />
+              );
+            },
+            headerShown: false,
+            tabBarShowLabel: false,
+          })}
+        >
+          <Tabs.Screen name="index" />
+          <Tabs.Screen name="search/index" />
+          <Tabs.Screen name="courses/index" />
+          <Tabs.Screen name="profile/index" />
+        </Tabs>
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
+}
