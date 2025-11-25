@@ -114,7 +114,7 @@ export default function ProfileScreen() {
         }
         
         const base64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: "base64",
         });
 
         // Pass both the image data and the detected mimeType
