@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import axiosInstance from "@/utils/axios.instance";
 import { SERVER_URI } from '@/utils/uri';
 
 export default function useKeepAliveSession() {
@@ -13,7 +13,7 @@ export default function useKeepAliveSession() {
         if (refreshToken) {
           try {
             // This silent call triggers the request interceptor → forces refresh
-            await axios.get(`${SERVER_URI}/me-student`, {
+            await axiosInstance.get(`${SERVER_URI}/me-student`, {
               headers: { 'refresh-token': refreshToken },
               timeout: 8000,
             });

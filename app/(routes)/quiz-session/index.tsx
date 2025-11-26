@@ -5,7 +5,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator
 import { useLocalSearchParams, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Toast } from 'react-native-toast-notifications';
-import axios from 'axios';
+import axiosInstance from "@/utils/axios.instance";
 import { SERVER_URI } from '@/utils/uri';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -79,7 +79,7 @@ export default function QuizSessionScreen() {
     try {
         const accessToken = await AsyncStorage.getItem("access_token");
         const refreshToken = await AsyncStorage.getItem("refresh_token");
-        const response = await axios.post(`${SERVER_URI}/submit-quiz`, {
+        const response = await axiosInstance.post(`${SERVER_URI}/submit-quiz`, {
             courseId,
             quizId: quiz.quizId,
             answers: finalAnswers
