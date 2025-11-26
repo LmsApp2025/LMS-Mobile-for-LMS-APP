@@ -1,26 +1,22 @@
 // hooks/useKeepAliveSession.ts
 import { useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axiosInstance from "@/utils/axios.instance";
-import { SERVER_URI } from '@/utils/uri';
+import axiosInstance from '@/utils/axios.instance';
 
 export default function useKeepAliveSession() {
   useEffect(() => {
     const handleAppStateChange = async (nextState: AppStateStatus) => {
       if (nextState === 'active') {
-        const refreshToken = await AsyncStorage.getItem('refresh_token');
-        if (refreshToken) {
-          try {
-            // This silent call triggers the request interceptor → forces refresh
-            await axiosInstance.get(`${SERVER_URI}/me-student`, {
-              headers: { 'refresh-token': refreshToken },
-              timeout: 8000,
-            });
-          } catch (err) {
-            // Expected if tokens are expired — will be handled by interceptor
-            console.log("Session keep-alive check complete");
-          }
+        try {
+          // This call does NOTHING special
+          // It just triggers the axiosInstance request interceptor
+          // → Which will automatically detect missing/expired access token
+          // → And trigger the refresh flow silently
+          await axiosInstance.get('/me-student');
+          console.log("Session keep-alive: tokens refreshed");
+        } catch (error) {
+          // Expected if tokens are expired — interceptor handles logout
+          console.log("Session expired or refresh failed — logging out");
         }
       }
     };
