@@ -9,6 +9,7 @@ import { Stack } from "expo-router";
 import { ToastProvider } from "react-native-toast-notifications";
 import { LogBox } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import useAppStateRefresh from '@/hooks/useAppStateRefresh';
 
 export { ErrorBoundary } from "expo-router";
 SplashScreen.preventAutoHideAsync();
@@ -28,6 +29,8 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
+  useAppStateRefresh();
+  
   return (
     <SafeAreaProvider>
     <ToastProvider>

@@ -7,18 +7,15 @@ import { router } from 'expo-router';
 
 const axiosInstance = axios.create({
   baseURL: SERVER_URI,
+  timeout: 10000,
 });
 
 let isRefreshing = false;
-let failedQueue: { resolve: (value: unknown) => void; reject: (reason?: any) => void; }[] = [];
+let failedQueue: Array<{ resolve: (value: any) => void; reject: (reason?: any) => void }> = [];
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
+    error ? prom.reject(error) : prom.resolve(token);
   });
   failedQueue = [];
 };
@@ -46,19 +43,17 @@ axiosInstance.interceptors.response.use(
         return Promise.reject(error);
     }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/refresh')) {
 
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
-        }).then(token => {
-          if (originalRequest.headers) {
-             originalRequest.headers['access-token'] = token;
-          }
+        })
+        .then(token => {
+          originalRequest.headers['access-token'] = token;
           return axiosInstance(originalRequest);
-        }).catch(err => {
-          return Promise.reject(err);
-        });
+        })
+        .catch(err => Promise.reject(err));
       }
 
       originalRequest._retry = true;
@@ -76,34 +71,36 @@ axiosInstance.interceptors.response.use(
         const refreshResponse = await axios.get(`${SERVER_URI}/refresh`, {
           headers: { 
             'refresh-token': refreshToken,
-            'Content-Type': 'application/json' 
+            //'Content-Type': 'application/json' 
           },
         });
 
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshResponse.data;
 
-        if (!newAccessToken) {
-            throw new Error("Server did not return new tokens");
-        }
+        // if (!newAccessToken) {
+        //     throw new Error("Server did not return new tokens");
+        // }
 
         // Securely store the new tokens
         await AsyncStorage.setItem('access_token', newAccessToken);
-        await AsyncStorage.setItem('refresh_token', newRefreshToken);
-        
-        // Set the new token on the original request's header
-        axiosInstance.defaults.headers.common['access-token'] = newAccessToken;
-        
-        // Robustly attach header to the original request for retry
-        if (!originalRequest.headers) {
-            originalRequest.headers = {};
+        if (newRefreshToken) {
+          await AsyncStorage.setItem('refresh_token', newRefreshToken);      
         }
+        
 
-        // Handle Axios v1.x+ AxiosHeaders object vs older plain objects
-        if (originalRequest.headers.set && typeof originalRequest.headers.set === 'function') {
-            originalRequest.headers.set('access-token', newAccessToken);
-        } else {
-            originalRequest.headers['access-token'] = newAccessToken;
-        }
+        axiosInstance.defaults.headers.common['access-token'] = newAccessToken;
+        originalRequest.headers['access-token'] = newAccessToken;
+
+        // if (!originalRequest.headers) {
+        //     originalRequest.headers = {};
+        // }
+
+        // // Handle Axios v1.x+ AxiosHeaders object vs older plain objects
+        // if (originalRequest.headers.set && typeof originalRequest.headers.set === 'function') {
+        //     originalRequest.headers.set('access-token', newAccessToken);
+        // } else {
+        //     originalRequest.headers['access-token'] = newAccessToken;
+        // }
         
         processQueue(null, newAccessToken);
         
@@ -117,7 +114,7 @@ axiosInstance.interceptors.response.use(
         // Only logout on definitive auth failures (400/401/403)
         // This prevents logout on network errors (500/Timeout)
         const status = refreshError.response?.status;
-        if (status === 400 || status === 401 || status === 403) {
+        if (status === 401 || status === 403 || !refreshError.response) {
             await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
             router.replace("/(routes)/login"); 
         }
