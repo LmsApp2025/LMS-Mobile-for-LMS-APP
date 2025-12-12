@@ -19,32 +19,34 @@ export default function LoginScreen() {
 
   const handleSignIn = async () => {
     if (!userInfo.username || !userInfo.password) {
-      Toast.show("Please enter username and password", { type: "danger" });
-      return;
+        Toast.show("Please enter username and password", { type: "danger" });
+        return;
     }
     setButtonSpinner(true);
     try {
-      const res = await axiosInstance.post(`/student-login`, {
-        username: userInfo.username,
-        password: userInfo.password,
-      });
-
-      // THE DEFINITIVE FIX: The server sends back a `user` object containing the _id.
-      if (res.data && res.data.user && res.data.user._id) {
-        Toast.show(res.data.message, { type: "success" });
-        router.push({
-          pathname: "/(routes)/verifyAccount",
-          params: { userId: res.data.user._id }, // Pass the correct ID
+        const res = await axiosInstance.post(`/student-login`, {
+            username: userInfo.username,
+            password: userInfo.password,
         });
-      } else {
-        throw new Error("Invalid response from server.");
-      }
+
+        // THE ABSOLUTE FINAL FIX: The server now sends back a simple `userId`.
+        if (res.data && res.data.userId) {
+            Toast.show(res.data.message, { type: "success" });
+            router.push({
+                pathname: "/(routes)/verifyAccount",
+                params: { userId: res.data.userId }, // Pass the direct userId
+            });
+        } else {
+            // This else block will now correctly catch any unexpected server response.
+            throw new Error("Invalid response from server during login.");
+        }
     } catch (error: any) {
-      Toast.show(error.response?.data?.message || "An error occurred during login.", { type: "danger" });
+        const errorMessage = error.response?.data?.message || "An error occurred during login.";
+        Toast.show(errorMessage, { type: "danger" });
     } finally {
-      setButtonSpinner(false);
+        setButtonSpinner(false);
     }
-  };
+};
 
   return (
     <LinearGradient colors={["#E5ECF9", "#F6F7F9"]} style={{ flex: 1, paddingTop: 20 }}>
