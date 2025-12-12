@@ -30,24 +30,27 @@ export default function LoginScreen() {
         return;
     }
     setButtonSpinner(true);
-    await axiosInstance
-      .post(`${SERVER_URI}/student-login`, {
+    try {
+      const res = await axiosInstance.post(`/student-login`, {
         username: userInfo.username,
         password: userInfo.password,
-      })
-      .then((res) => {
-        Toast.show(res.data.message, { type: "success" });
-        router.push({
-            pathname: "/(routes)/verifyAccount",
-            params: { userId: res.data.userId, isStudent: "true" } // Pass a flag
-        });
-      })
-      .catch((error) => {
-        Toast.show(error.response?.data?.message || "An error occurred", { type: "danger" });
-      })
-      .finally(() => {
-        setButtonSpinner(false);
       });
+
+      Toast.show(res.data.message, { type: "success" });
+      
+      // THE DEFINITIVE FIX: The server now returns the user object in `res.data.user`.
+      // We must pass the ID from inside that object.
+      const userId = res.data.user._id;
+
+      router.push({
+        pathname: "/(routes)/verifyAccount",
+        params: { userId: userId }, // Pass the correct ID
+      });
+    } catch (error: any) {
+      Toast.show(error.response?.data?.message || "An error occurred", { type: "danger" });
+    } finally {
+      setButtonSpinner(false);
+    }
   };
 
   return (

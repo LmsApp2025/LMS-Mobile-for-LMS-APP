@@ -36,27 +36,23 @@ export default function VerifyAccountScreen() {
         return;
     }
     setIsLoading(true);
-    await axiosInstance
-      .post(`${SERVER_URI}/student-verify-otp`, {
+    try {
+      // THE DEFINITIVE FIX: Use the correct relative path for axiosInstance
+      const res = await axiosInstance.post(`/student-verify-otp`, {
         userId: userId,
         otp: otp,
-      })
-      .then(async (res) => {
-        // THE DEFINITIVE FIX: Store tokens BEFORE navigating
-        await AsyncStorage.setItem("access_token", res.data.accessToken);
-        await AsyncStorage.setItem("refresh_token", res.data.refreshToken);
-        Toast.show("Login Successful!", { type: "success" });
-        // Use replace to clear the auth stack
-        router.replace("/(tabs)");
-      })
-      .catch((error) => {
-        Toast.show(error.response?.data?.message || "Verification failed!", {
-          type: "danger",
-        });
-      })
-      .finally(() => {
-        setIsLoading(false);
       });
+
+      await AsyncStorage.setItem("access_token", res.data.accessToken);
+      await AsyncStorage.setItem("refresh_token", res.data.refreshToken);
+      Toast.show("Login Successful!", { type: "success" });
+      router.replace("/(tabs)");
+      
+    } catch (error: any) {
+      Toast.show(error.response?.data?.message || "Verification failed!", { type: "danger" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
