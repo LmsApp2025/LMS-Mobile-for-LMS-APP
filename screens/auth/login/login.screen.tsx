@@ -1,16 +1,12 @@
-import {
-  View, Text, ScrollView, Image, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator,
-} from "react-native";
+import { View, Text, ScrollView, Image, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
 import { AntDesign,  Ionicons, SimpleLineIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useFonts, Raleway_700Bold, Raleway_600SemiBold } from "@expo-google-fonts/raleway";
+import { useFonts, Raleway_700Bold } from "@expo-google-fonts/raleway";
 import { Nunito_700Bold, Nunito_600SemiBold } from "@expo-google-fonts/nunito";
 import { useState } from "react";
 import { commonStyles } from "@/styles/common/common.styles";
 import { router } from "expo-router";
-//import axios from "axios";
 import axiosInstance from "@/utils/axios.instance";
-import { SERVER_URI } from "@/utils/uri";
 import { Toast } from "react-native-toast-notifications";
 
 export default function LoginScreen() {
@@ -18,16 +14,13 @@ export default function LoginScreen() {
   const [buttonSpinner, setButtonSpinner] = useState(false);
   const [userInfo, setUserInfo] = useState({ username: "", password: "" });
 
-  let [fontsLoaded, fontError] = useFonts({
-    Raleway_600SemiBold, Raleway_700Bold, Nunito_700Bold, Nunito_600SemiBold,
-  });
-
+  let [fontsLoaded, fontError] = useFonts({ Raleway_700Bold, Nunito_700Bold, Nunito_600SemiBold });
   if (!fontsLoaded && !fontError) { return null; }
 
   const handleSignIn = async () => {
     if (!userInfo.username || !userInfo.password) {
-        Toast.show("Please enter username and password", { type: "danger" });
-        return;
+      Toast.show("Please enter username and password", { type: "danger" });
+      return;
     }
     setButtonSpinner(true);
     try {
@@ -36,18 +29,18 @@ export default function LoginScreen() {
         password: userInfo.password,
       });
 
-      Toast.show(res.data.message, { type: "success" });
-      
-      // THE DEFINITIVE FIX: The server now returns the user object in `res.data.user`.
-      // We must pass the ID from inside that object.
-      const userId = res.data.user._id;
-
-      router.push({
-        pathname: "/(routes)/verifyAccount",
-        params: { userId: userId }, // Pass the correct ID
-      });
+      // THE DEFINITIVE FIX: The server sends back a `user` object containing the _id.
+      if (res.data && res.data.user && res.data.user._id) {
+        Toast.show(res.data.message, { type: "success" });
+        router.push({
+          pathname: "/(routes)/verifyAccount",
+          params: { userId: res.data.user._id }, // Pass the correct ID
+        });
+      } else {
+        throw new Error("Invalid response from server.");
+      }
     } catch (error: any) {
-      Toast.show(error.response?.data?.message || "An error occurred", { type: "danger" });
+      Toast.show(error.response?.data?.message || "An error occurred during login.", { type: "danger" });
     } finally {
       setButtonSpinner(false);
     }
@@ -61,38 +54,18 @@ export default function LoginScreen() {
         <Text style={styles.learningText}>Login with your provided credentials</Text>
         <View style={styles.inputContainer}>
           <View>
-            <TextInput
-              style={[styles.input, { paddingLeft: 40 }]}
-              placeholder="Username"
-              value={userInfo.username}
-              onChangeText={(value) => setUserInfo({ ...userInfo, username: value })}
-            />
+            <TextInput style={[styles.input, { paddingLeft: 40 }]} placeholder="Username" value={userInfo.username} onChangeText={(value) => setUserInfo({ ...userInfo, username: value })}/>
             <AntDesign style={styles.icon1} name="user" size={20} color={"#A1A1A1"} />
             <View style={{ marginTop: 15 }}>
-              <TextInput
-                style={commonStyles.input}
-                secureTextEntry={!isPasswordVisible}
-                placeholder="Password"
-                value={userInfo.password}
-                onChangeText={(value) => setUserInfo({ ...userInfo, password: value })}
-              />
+              <TextInput style={commonStyles.input} secureTextEntry={!isPasswordVisible} placeholder="Password" value={userInfo.password} onChangeText={(value) => setUserInfo({ ...userInfo, password: value })} />
               <TouchableOpacity style={styles.visibleIcon} onPress={() => setPasswordVisible(!isPasswordVisible)}>
-                {isPasswordVisible ? (
-                  <Ionicons name="eye-off-outline" size={23} color={"#747474"} />
-                ) : (
-                  <Ionicons name="eye-outline" size={23} color={"#747474"} />
-                )}
+                {isPasswordVisible ? (<Ionicons name="eye-off-outline" size={23} color={"#747474"} />) : (<Ionicons name="eye-outline" size={23} color={"#747474"} />)}
               </TouchableOpacity>
               <SimpleLineIcons style={styles.icon2} name="lock" size={20} color={"#A1A1A1"} />
             </View>
             <TouchableOpacity style={styles.loginButton} onPress={handleSignIn} disabled={buttonSpinner}>
-              {buttonSpinner ? (
-                <ActivityIndicator size="small" color={"white"} />
-              ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
-              )}
+              {buttonSpinner ? (<ActivityIndicator size="small" color={"white"} />) : (<Text style={styles.loginButtonText}>Sign In</Text>)}
             </TouchableOpacity>
-            {/* MODIFICATION: The "Don't have an account?" section is now removed */}
           </View>
         </View>
       </ScrollView>

@@ -1,43 +1,31 @@
-// C:\LMS App copy Part 2\Lms-App - Copy\new-client\screens\auth\verify\verify.account.tsx
-
-import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator,
-} from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
 import React, { useRef, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-//import axios from "axios";
 import axiosInstance from "@/utils/axios.instance";
-import { SERVER_URI } from "@/utils/uri";
 import { Toast } from "react-native-toast-notifications";
 
 export default function VerifyAccountScreen() {
-  const { userId } = useLocalSearchParams();
+  const { userId } = useLocalSearchParams<{ userId: string }>();
   const [code, setCode] = useState(new Array(4).fill(""));
   const [isLoading, setIsLoading] = useState(false);
-  const inputs = useRef<any>([...Array(4)].map(() => React.createRef()));
+  // Correctly type the refs array
+  const inputs = useRef<(TextInput | null)[]>([]);
 
-  const handleInput = (text: any, index: any) => {
+  const handleInput = (text: string, index: number) => {
     const newCode = [...code];
     newCode[index] = text;
     setCode(newCode);
-    if (text && index < 3) {
-      inputs.current[index + 1].current.focus();
-    }
-    if (text === "" && index > 0) {
-      inputs.current[index - 1].current.focus();
-    }
+    if (text && index < 3) { inputs.current[index + 1]?.focus(); }
+    if (text === "" && index > 0) { inputs.current[index - 1]?.focus(); }
   };
 
   const handleVerify = async () => {
     const otp = code.join("");
-    if (otp.length !== 4) {
-        Toast.show("Please enter the 4-digit code.", { type: "danger" });
-        return;
-    }
+    if (otp.length !== 4) { Toast.show("Please enter the 4-digit code.", { type: "danger" }); return; }
+    
     setIsLoading(true);
     try {
-      // THE DEFINITIVE FIX: Use the correct relative path for axiosInstance
       const res = await axiosInstance.post(`/student-verify-otp`, {
         userId: userId,
         otp: otp,
@@ -58,30 +46,26 @@ export default function VerifyAccountScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.headerText}>Verify Your Login</Text>
-      <Text style={styles.subText}>
-        We have sent a verification code to your registered email address.
-      </Text>
+      <Text style={styles.subText}>We have sent a verification code to your registered email address.</Text>
       <View style={styles.inputContainer}>
         {code.map((_, index) => (
           <TextInput
-            key={index} style={styles.inputBox} keyboardType="number-pad" maxLength={1}
-            onChangeText={(text) => handleInput(text, index)} value={code[index]}
-            ref={inputs.current[index]} autoFocus={index === 0}
+            key={index}
+            style={styles.inputBox}
+            keyboardType="number-pad"
+            maxLength={1}
+            onChangeText={(text) => handleInput(text, index)}
+            value={code[index]}
+            // FIXED: The callback function now correctly assigns the ref without returning a value.
+            ref={(ref) => { inputs.current[index] = ref; }}
+            autoFocus={index === 0}
           />
         ))}
       </View>
-      <TouchableOpacity 
-        style={[styles.button, isLoading && styles.buttonDisabled]} 
-        onPress={handleVerify} disabled={isLoading}
-      >
+      <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleVerify} disabled={isLoading}>
         {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Verify</Text>}
       </TouchableOpacity>
-      <View style={styles.loginLink}>
-        <Text style={styles.backText}>Entered wrong credentials?</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.loginText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <View style={styles.loginLink}><Text style={styles.backText}>Entered wrong credentials?</Text><TouchableOpacity onPress={() => router.back()}><Text style={styles.loginText}>Go Back</Text></TouchableOpacity></View>
     </View>
   );
 }
