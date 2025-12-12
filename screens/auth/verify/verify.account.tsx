@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axiosInstance from "@/utils/axios.instance";
 import { Toast } from "react-native-toast-notifications";
+import { refreshUserSession } from "@/hooks/auth/useUser";
 
 export default function VerifyAccountScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
@@ -33,6 +34,11 @@ export default function VerifyAccountScreen() {
 
       await AsyncStorage.setItem("access_token", res.data.accessToken);
       await AsyncStorage.setItem("refresh_token", res.data.refreshToken);
+
+       // Step 2: Manually trigger a refresh of the user session globally.
+      // The useUser hook will now refetch the user data with the new tokens.
+      refreshUserSession();
+      
       Toast.show("Login Successful!", { type: "success" });
       router.replace("/(tabs)");
       

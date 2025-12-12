@@ -4,6 +4,25 @@ import { useState, useEffect, useCallback } from "react";
 import axiosInstance from '@/utils/axios.instance';
 //import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// Create a simple event emitter
+const events = {
+  listeners: [] as (() => void)[],
+  subscribe(listener: () => void) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
+  },
+  emit() {
+    this.listeners.forEach(l => l());
+  },
+};
+
+// This function will now be exported and called ONLY after login is complete.
+export const refreshUserSession = () => {
+  events.emit();
+};
+
 export default function useUser() {
   const [loading, setLoading] = useState(true); // Start with loading = true
   const [user, setUser] = useState<User | undefined>(undefined);
@@ -33,6 +52,8 @@ export default function useUser() {
 
   useEffect(() => {
     fetchUser();
+    const unsubscribe = events.subscribe(fetchUser); // Re-fetch when login completes
+    return unsubscribe;
   }, [fetchUser]);
 
   return { loading, user, refetch: fetchUser };
