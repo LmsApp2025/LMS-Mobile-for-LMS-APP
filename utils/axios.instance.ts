@@ -74,7 +74,7 @@ axiosInstance.interceptors.response.use(
             throw new Error("No refresh token available");
         }
 
-        // Separate instance for refresh
+        // Use fresh axios instance for refresh
         const refreshResponse = await axios.get(`${SERVER_URI}/refresh`, {
           headers: { 
             'refresh-token': refreshToken,
@@ -96,7 +96,8 @@ axiosInstance.interceptors.response.use(
         
         // IMPORTANT: Handle Axios header object variations
         if (originalRequest.headers.set && typeof originalRequest.headers.set === 'function') {
-            originalRequest.headers.set('access-token', newAccessToken);
+            
+          originalRequest.headers.set('access-token', newAccessToken);
         } else {
             originalRequest.headers['access-token'] = newAccessToken;
         }

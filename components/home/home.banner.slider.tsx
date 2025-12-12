@@ -1,48 +1,31 @@
 import { View, Image, ActivityIndicator, StyleSheet, Dimensions } from "react-native";
 import Swiper from "react-native-swiper";
 import { useEffect, useState } from "react";
-//import axios from "axios";
-import axiosInstance from "@/utils/axios.instance";
-import { SERVER_URI } from "@/utils/uri";
-import {heightPercentageToDP as hp} from "react-native-responsive-screen";
-//import axiosInstance from "@/utils/axios.instance";
+import { heightPercentageToDP as hp } from "react-native-responsive-screen";
+// NEW: Import the service function
+import { getBanners } from "@/services/layout.service";
 
-type BannerImageType = {
-    _id: string;
-    url: string;
-    width: number;
-    height: number;
-}
-
+type BannerImageType = { _id: string; url: string; width: number; height: number; };
 const screenWidth = Dimensions.get('window').width;
 
 export default function HomeBannerSlider() {
   const [bannerImages, setBannerImages] = useState<BannerImageType[]>([]);
   const [loading, setLoading] = useState(true);
-   const [sliderHeight, setSliderHeight] = useState(200);
+  const [sliderHeight, setSliderHeight] = useState(200);
 
   useEffect(() => {
-    // THE FIX: Fetch images from the new /get-banners endpoint
-    axiosInstance.get(`${SERVER_URI}/get-banners`, {
-        headers: { 'ngrok-skip-browser-warning': 'true' }
-    })
-      .then(res => {
-        if (res.data && res.data.bannerImages) {
-          const images: BannerImageType[] = res.data.bannerImages;
-          setBannerImages(images);
-          if (images.length > 0) {
-            const firstImage = images[0];
-            const imageAspectRatio = firstImage.height / firstImage.width;
-            setSliderHeight((screenWidth - 32) * imageAspectRatio); // -32 for horizontal margin
-          }
-        }
-      })
-      .catch(error => {
-        console.error("Failed to fetch banner images:", error);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    const fetchBanners = async () => {
+      setLoading(true);
+      const images = await getBanners(); // Use the service function
+      if (images && images.length > 0) {
+        setBannerImages(images);
+        const firstImage = images[0];
+        const imageAspectRatio = firstImage.height / firstImage.width;
+        setSliderHeight((screenWidth - 32) * imageAspectRatio);
+      }
+      setLoading(false);
+    };
+    fetchBanners();
   }, []);
 
   const onIndexChanged = (index: number) => {
@@ -65,23 +48,11 @@ export default function HomeBannerSlider() {
       return null;
   }
 
-  return (
+ return (
     <View style={[styles.container, { height: sliderHeight }]}>
-      <Swiper
-        dotStyle={styles.dot}
-        activeDotStyle={styles.activeDot}
-        autoplay={true}
-        autoplayTimeout={5}
-        onIndexChanged={onIndexChanged}
-        loop={true}
-      >
+      <Swiper /* ... (Swiper props remain the same) */ >
         {bannerImages.map((item) => (
-          <View key={item._id} style={styles.slide}>
-            <Image
-              source={{ uri: item.url }}
-              style={styles.image}
-            />
-          </View>
+          <View key={item._id} style={styles.slide}><Image source={{ uri: item.url }} style={styles.image} /></View>
         ))}
       </Swiper>
     </View>
