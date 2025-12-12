@@ -10,7 +10,6 @@ export default function VerifyAccountScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const [code, setCode] = useState(new Array(4).fill(""));
   const [isLoading, setIsLoading] = useState(false);
-  // Correctly type the refs array
   const inputs = useRef<(TextInput | null)[]>([]);
 
   const handleInput = (text: string, index: number) => {
@@ -27,10 +26,7 @@ export default function VerifyAccountScreen() {
     
     setIsLoading(true);
     try {
-      const res = await axiosInstance.post(`/student-verify-otp`, {
-        userId: userId,
-        otp: otp,
-      });
+      const res = await axiosInstance.post(`/student-verify-otp`, { userId, otp });
 
       await AsyncStorage.setItem("access_token", res.data.accessToken);
       await AsyncStorage.setItem("refresh_token", res.data.refreshToken);
@@ -38,7 +34,7 @@ export default function VerifyAccountScreen() {
        // Step 2: Manually trigger a refresh of the user session globally.
       // The useUser hook will now refetch the user data with the new tokens.
       refreshUserSession();
-      
+
       Toast.show("Login Successful!", { type: "success" });
       router.replace("/(tabs)");
       
